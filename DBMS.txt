@@ -1,0 +1,836 @@
+================================================================
+CSA2519 - DATABASE SYSTEM ADMINISTRATION
+LAB EXAM CHEAT SHEET (LAB 1 - LAB 7)
+Copy-paste ready commands
+================================================================
+
+NOTE: Content for LAB 1 and LAB 3 was NOT in your uploaded files
+(you only gave me Experiment 2, 4, 5, 6, 7). The blocks for LAB 1
+and LAB 3 below are reconstructed from standard MySQL/PostgreSQL
+syntax + your Question Bank's "Practical Commands to Practice"
+list (CREATE DATABASE, CREATE USER, CREATE ROLE, GRANT, REVOKE).
+They are generic/standard commands, NOT copied from a lab sheet
+of yours, so double check them against your actual Lab 1 / Lab 3
+sheet if you can find it before the exam.
+
+
+================================================================
+LAB 1 - INSTALL & CONFIGURE MySQL / PostgreSQL / Oracle
+(RECONSTRUCTED - verify against your own Lab 1 sheet)
+================================================================
+
+--- MySQL: check install & basic config ---
+SELECT VERSION();
+SHOW VARIABLES LIKE 'port';
+SHOW VARIABLES LIKE 'datadir';
+SHOW VARIABLES LIKE 'basedir';
+SHOW DATABASES;
+STATUS;
+
+--- PostgreSQL: check install & basic config ---
+SELECT version();
+SHOW port;
+SHOW data_directory;
+SHOW config_file;
+\l                -- list databases
+\conninfo         -- show current connection info
+
+--- Typical "first login" steps (both) ---
+-- MySQL
+mysql -u root -p
+
+-- PostgreSQL
+psql -U postgres
+
+
+================================================================
+LAB 2 - CREATE A NEW DATABASE & MANAGE TABLESPACES
+================================================================
+
+--------------------- PostgreSQL ---------------------
+
+-- A. Create tablespace
+CREATE TABLESPACE CollegeSpace
+LOCATION 'D:/PostgreSQLData/CollegeSpace';
+
+-- B. Create first database using it
+CREATE DATABASE CollegeDB
+TABLESPACE CollegeSpace;
+
+-- C. Connect to it
+\c CollegeDB
+
+-- D. Create table
+CREATE TABLE Student
+(
+    Student_ID INT,
+    Student_Name VARCHAR(50),
+    Course VARCHAR(30),
+    Marks INT
+);
+
+-- E. Insert rows
+INSERT INTO Student
+VALUES
+(101, 'Ananya', 'BCA', 85),
+(102, 'Rahul', 'BCA', 78),
+(103, 'Sneha', 'BCA', 92);
+
+-- F. Display rows
+SELECT * FROM Student;
+
+-- G. Go back to postgres
+\c postgres
+
+-- H. Create second database in SAME tablespace
+CREATE DATABASE FacultyDB
+TABLESPACE CollegeSpace;
+
+-- I. Connect to FacultyDB
+\c FacultyDB
+
+-- J. Create Faculty table
+CREATE TABLE Faculty
+(
+    Faculty_ID INT,
+    Faculty_Name VARCHAR(50),
+    Department VARCHAR(50),
+    Salary NUMERIC(10,2)
+);
+
+-- K. Insert rows
+INSERT INTO Faculty
+VALUES
+(1, 'Dr. Rao', 'Computer Science', 65000),
+(2, 'Dr. Sharma', 'Mathematics', 60000),
+(3, 'Dr. Mehta', 'Physics', 62000);
+
+-- L. Verify
+SELECT * FROM Faculty;
+
+-- M. Drop everything (return to postgres first)
+\c postgres
+DROP DATABASE CollegeDB;
+DROP DATABASE FacultyDB;
+DROP TABLESPACE CollegeSpace;
+
+
+--------------------- MySQL ---------------------
+
+-- Create tablespace
+CREATE TABLESPACE CollegeSpace
+ADD DATAFILE 'CollegeSpace.ibd'
+ENGINE = InnoDB;
+
+-- Create first database
+CREATE DATABASE CollegeDB;
+USE CollegeDB;
+
+-- Create table in tablespace
+CREATE TABLE Student
+(
+    Student_ID INT,
+    Student_Name VARCHAR(50),
+    Course VARCHAR(30),
+    Marks INT
+)
+ENGINE = InnoDB
+TABLESPACE CollegeSpace;
+
+-- Insert data
+INSERT INTO Student
+VALUES
+(101, 'Ananya', 'BCA', 85),
+(102, 'Rahul', 'BCA', 78),
+(103, 'Sneha', 'BCA', 92);
+
+-- Display data
+SELECT * FROM Student;
+
+-- Create second database
+CREATE DATABASE FacultyDB;
+USE FacultyDB;
+
+-- Create table in SAME tablespace
+CREATE TABLE Faculty
+(
+    Faculty_ID INT,
+    Faculty_Name VARCHAR(50),
+    Department VARCHAR(50),
+    Salary DECIMAL(10,2)
+)
+ENGINE = InnoDB
+TABLESPACE CollegeSpace;
+
+-- Insert data
+INSERT INTO Faculty
+VALUES
+(1, 'Dr. Rao', 'Computer Science', 65000),
+(2, 'Dr. Sharma', 'Mathematics', 60000),
+(3, 'Dr. Mehta', 'Physics', 62000);
+
+-- Verify which tables are in which tablespace
+SELECT
+    TABLE_SCHEMA,
+    TABLE_NAME,
+    TABLESPACE_NAME
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_NAME IN ('Student', 'Faculty');
+
+-- Delete everything
+DROP DATABASE CollegeDB;
+DROP DATABASE FacultyDB;
+DROP TABLESPACE CollegeSpace
+ENGINE = InnoDB;
+
+FLOW TO REMEMBER:
+create tablespace -> create 2 databases -> create tables in each
+-> assign both tables to same tablespace -> insert data -> verify
+-> drop databases -> drop tablespace.
+
+
+================================================================
+LAB 3 - CREATE & MANAGE DATABASE USERS AND ROLES
+(RECONSTRUCTED - verify against your own Lab 3 sheet)
+================================================================
+
+--------------------- PostgreSQL ---------------------
+
+-- Create a role/user
+CREATE ROLE faculty_role;
+CREATE USER prof_rao WITH PASSWORD 'Prof@123';
+
+-- Give role login ability (makes it act like a user)
+ALTER ROLE faculty_role LOGIN;
+
+-- Add user to role (role membership)
+GRANT faculty_role TO prof_rao;
+
+-- List roles/users
+SELECT rolname, rolcanlogin, rolsuper FROM pg_roles;
+
+-- Change password
+ALTER USER prof_rao WITH PASSWORD 'NewPass@123';
+
+-- Remove role membership
+REVOKE faculty_role FROM prof_rao;
+
+-- Drop user/role
+DROP USER prof_rao;
+DROP ROLE faculty_role;
+
+--------------------- MySQL ---------------------
+
+-- Create a user
+CREATE USER 'prof_rao'@'localhost' IDENTIFIED BY 'Prof@123';
+
+-- Create a role (MySQL 8+)
+CREATE ROLE 'faculty_role';
+
+-- Grant privileges to the role
+GRANT SELECT, INSERT ON college_db.* TO 'faculty_role';
+
+-- Assign role to user
+GRANT 'faculty_role' TO 'prof_rao'@'localhost';
+
+-- Activate role for the user by default
+SET DEFAULT ROLE 'faculty_role' TO 'prof_rao'@'localhost';
+
+-- List users
+SELECT User, Host FROM mysql.user;
+
+-- Show a user's roles/grants
+SHOW GRANTS FOR 'prof_rao'@'localhost';
+
+-- Remove role from user
+REVOKE 'faculty_role' FROM 'prof_rao'@'localhost';
+
+-- Drop user/role
+DROP USER 'prof_rao'@'localhost';
+DROP ROLE 'faculty_role';
+
+
+================================================================
+LAB 4 - IMPLEMENT USER PRIVILEGES & ACCESS CONTROL
+(GRANT and REVOKE)
+================================================================
+
+--------------------- Part A: PostgreSQL ---------------------
+
+-- Step 1: Login as admin
+psql -U postgres
+
+-- Step 2: Create a database
+CREATE DATABASE college_db;
+-- (then connect to it: \c college_db)
+
+-- Step 3: Create a table
+CREATE TABLE student (
+    student_id INT PRIMARY KEY,
+    name VARCHAR(50),
+    department VARCHAR(50),
+    marks INT
+);
+
+-- Step 4: Insert sample records
+INSERT INTO student VALUES
+(101, 'Anu', 'CSE', 85),
+(102, 'Rahul', 'ISE', 78),
+(103, 'Priya', 'CSE', 92);
+
+SELECT * FROM student;
+
+-- Step 5: Create a user
+CREATE USER lab_user WITH PASSWORD 'Lab@123';
+
+-- Step 6: Grant CONNECT privilege
+GRANT CONNECT ON DATABASE college_db TO lab_user;
+
+-- Step 7: Grant SELECT privilege
+GRANT SELECT ON student TO lab_user;
+
+-- Step 8: Grant INSERT privilege
+GRANT INSERT ON student TO lab_user;
+INSERT INTO student VALUES (104, 'Kiran', 'ECE', 81);
+
+-- Step 9: Grant UPDATE privilege
+GRANT UPDATE ON student TO lab_user;
+UPDATE student SET marks = 88 WHERE student_id = 104;
+
+-- Step 10: Grant DELETE privilege
+GRANT DELETE ON student TO lab_user;
+DELETE FROM student WHERE student_id = 104;
+
+-- Step 11: Grant all privileges at once
+GRANT ALL PRIVILEGES ON student TO lab_user;
+
+-- Step 12: Check privileges
+SELECT * FROM information_schema.table_privileges
+WHERE table_name = 'student';
+
+-- Step 13-16: Revoke privileges one by one, then all
+REVOKE DELETE ON student FROM lab_user;
+REVOKE UPDATE ON student FROM lab_user;
+REVOKE INSERT ON student FROM lab_user;
+REVOKE ALL PRIVILEGES ON student FROM lab_user;
+
+-- Step 17: Drop user and database
+DROP OWNED BY lab_user;
+DROP USER lab_user;
+DROP DATABASE college_db;
+
+
+--------------------- Part B: MySQL ---------------------
+
+-- Step 1: Login as root
+mysql -u root -p
+
+-- Step 2: Create a database
+CREATE DATABASE college_db;
+USE college_db;
+
+-- Step 3: Create a table
+CREATE TABLE student (
+    student_id INT PRIMARY KEY,
+    name VARCHAR(50),
+    department VARCHAR(50),
+    marks INT
+);
+
+-- Step 4: Insert sample records
+INSERT INTO student VALUES
+(101, 'Anu', 'CSE', 85),
+(102, 'Rahul', 'ISE', 78),
+(103, 'Priya', 'CSE', 92);
+
+SELECT * FROM student;
+
+-- Step 5: Create a user
+CREATE USER 'lab_user'@'localhost'
+IDENTIFIED BY 'Lab@123';
+
+SELECT User, Host FROM mysql.user;
+
+-- Step 6: Grant SELECT
+GRANT SELECT
+ON college_db.student
+TO 'lab_user'@'localhost';
+
+-- Step 7: Grant INSERT
+GRANT INSERT
+ON college_db.student
+TO 'lab_user'@'localhost';
+
+INSERT INTO college_db.student
+VALUES (104, 'Kiran', 'ECE', 81);
+
+-- Step 8: Grant UPDATE
+GRANT UPDATE
+ON college_db.student
+TO 'lab_user'@'localhost';
+
+UPDATE college_db.student
+SET marks = 88
+WHERE student_id = 104;
+
+-- Step 9: Grant DELETE
+GRANT DELETE
+ON college_db.student
+TO 'lab_user'@'localhost';
+
+DELETE FROM college_db.student
+WHERE student_id = 104;
+
+-- Step 10: Grant all privileges
+GRANT ALL PRIVILEGES
+ON college_db.student
+TO 'lab_user'@'localhost';
+
+-- Step 11: Check privileges
+SHOW GRANTS FOR 'lab_user'@'localhost';
+
+-- Step 12-15: Revoke privileges one by one, then all
+REVOKE DELETE
+ON college_db.student
+FROM 'lab_user'@'localhost';
+
+REVOKE UPDATE
+ON college_db.student
+FROM 'lab_user'@'localhost';
+
+REVOKE INSERT
+ON college_db.student
+FROM 'lab_user'@'localhost';
+
+REVOKE ALL PRIVILEGES
+ON college_db.student
+FROM 'lab_user'@'localhost';
+
+SHOW GRANTS FOR 'lab_user'@'localhost';
+
+-- Step 16-17: Drop user and database
+DROP USER 'lab_user'@'localhost';
+DROP DATABASE college_db;
+
+
+================================================================
+LAB 5 - SECURITY HARDENING, PASSWORD POLICIES, FIREWALL /
+SECURE CONFIG, AUDIT VERIFICATION
+================================================================
+
+--------------------- MySQL ---------------------
+
+-- PART A: PASSWORD POLICY
+
+-- Step 2: Check MySQL version
+SELECT VERSION();
+
+-- Step 3: Check existing password validation settings
+SHOW VARIABLES LIKE 'validate_password%';
+
+-- Step 4: Check for password validation component
+SELECT PLUGIN_NAME, PLUGIN_STATUS
+FROM INFORMATION_SCHEMA.PLUGINS
+WHERE PLUGIN_NAME LIKE '%validate%';
+
+-- Step 5: Install the password validation component
+INSTALL COMPONENT 'file://component_validate_password';
+
+-- Step 6: Verify password validation
+SHOW VARIABLES LIKE 'validate_password%';
+
+-- Step 7: Check password policy
+SHOW VARIABLES LIKE 'validate_password.policy';
+SHOW VARIABLES LIKE 'validate_password.length';
+
+-- Step 8: Configure password policy
+SET GLOBAL validate_password.policy = 'STRONG';
+SET GLOBAL validate_password.length = 8;
+
+-- Step 9-10: Verify the password policy
+SHOW VARIABLES LIKE 'validate_password.policy';
+SHOW VARIABLES LIKE 'validate_password.length';
+
+-- Step 11: Test a strong password
+CREATE USER 'password_test'@'localhost'
+IDENTIFIED BY 'College@2026';
+
+-- Step 12: Remove the temporary test user
+DROP USER 'password_test'@'localhost';
+
+-- PART B: SECURE CONFIGURATION
+
+-- Step 13: Check MySQL port
+SHOW VARIABLES LIKE 'port';
+
+-- Step 14: Check bind address
+SHOW VARIABLES LIKE 'bind_address';
+
+-- Step 15: Check MySQL users
+SELECT User, Host FROM mysql.user;
+
+-- Step 16: Check anonymous users
+SELECT User, Host FROM mysql.user WHERE User = '';
+
+-- Step 17: Check root account
+SELECT User, Host FROM mysql.user WHERE User = 'root';
+
+-- Step 18: Check remote accounts
+SELECT User, Host FROM mysql.user
+WHERE Host NOT IN ('localhost', '127.0.0.1', '::1');
+
+-- PART C: AUDIT VERIFICATION
+
+-- Step 19: Check general query logging
+SHOW VARIABLES LIKE 'general_log';
+
+-- Step 20: Check error logging
+SHOW VARIABLES LIKE 'log_error';
+
+
+--------------------- PostgreSQL ---------------------
+
+-- Step 1: Check PostgreSQL version
+SELECT version();
+
+-- Step 2: Create a test user with a strong password
+CREATE ROLE password_test1
+LOGIN
+PASSWORD 'College@2026';
+
+-- Step 3: Verify the test user
+SELECT rolname, rolcanlogin
+FROM pg_roles
+WHERE rolname = 'password_test';
+
+-- Step 4: Check password expiration
+ALTER ROLE password_test
+VALID UNTIL '2027-12-31';
+
+-- Step 5: Remove the temporary test user
+DROP ROLE password_test;
+
+-- PART B: SECURE POSTGRESQL CONFIGURATION
+
+-- Step 6: Check the PostgreSQL port
+SHOW port;
+
+-- Step 7: Check listening addresses
+SHOW listen_addresses;
+
+-- PART C: USER AND ACCOUNT SECURITY
+
+-- Step 8: Check PostgreSQL users and roles
+SELECT
+    rolname,
+    rolcanlogin,
+    rolsuper,
+    rolcreatedb,
+    rolcreaterole
+FROM pg_roles;
+
+-- Step 9: Check login roles
+SELECT rolname, rolcanlogin
+FROM pg_roles
+WHERE rolcanlogin = true;
+
+-- Step 10: Check superuser accounts
+SELECT rolname, rolsuper
+FROM pg_roles
+WHERE rolsuper = true;
+
+-- Step 11: Check roles with database-creation privilege
+SELECT rolname, rolcreatedb
+FROM pg_roles
+WHERE rolcreatedb = true;
+
+-- Step 12: Check roles with role-creation privilege
+SELECT rolname, rolcreaterole
+FROM pg_roles
+WHERE rolcreaterole = true;
+
+-- PART D: AUDIT AND LOGGING
+
+-- Step 13: Check PostgreSQL logging configuration
+SHOW logging_collector;
+
+-- Step 14: Check log directory
+SHOW log_directory;
+
+-- Step 15: Check log file name
+SHOW log_filename;
+
+
+================================================================
+LAB 6 - IMPLEMENT & VERIFY PASSWORD AUTHENTICATION AND SSL
+AUTHENTICATION
+================================================================
+
+--------------------- MySQL ---------------------
+
+-- PART A: PASSWORD AUTHENTICATION SETUP
+
+-- Step 1: Create a database and user
+CREATE DATABASE testdb;
+USE testdb;
+
+CREATE USER 'secure_user'@'localhost'
+IDENTIFIED BY 'Secure@12345';
+
+-- Step 2: Give the user privileges
+GRANT ALL PRIVILEGES
+ON testdb.*
+TO 'secure_user'@'localhost';
+
+-- Step 3: Check the user
+SELECT User, Host, plugin
+FROM mysql.user
+WHERE User = 'secure_user';
+
+-- Step 4: Check the user's privileges
+SHOW GRANTS FOR 'secure_user'@'localhost';
+
+-- Step 5: Test password authentication
+-- (Create a new MySQL Workbench connection with secure_user's
+-- credentials. If it connects, password auth is verified.)
+
+-- PART B: SSL AUTHENTICATION CONFIGURATION
+
+-- Step 6: Check SSL/TLS support (as admin)
+SHOW VARIABLES LIKE '%ssl%';
+SHOW VARIABLES LIKE 'require_secure_transport';
+
+-- Step 7: Check the current connection for SSL
+SHOW STATUS LIKE 'Ssl_cipher';
+SHOW STATUS LIKE 'Ssl_version';
+
+-- PART C: CREATE AN SSL-REQUIRED USER
+
+-- Step 8: Create an SSL user
+CREATE USER 'ssl_user'@'localhost'
+IDENTIFIED BY 'Ssl@12345'
+REQUIRE SSL;
+
+-- Step 9: Grant privileges to the SSL user
+GRANT ALL PRIVILEGES
+ON testdb.*
+TO 'ssl_user'@'localhost';
+
+-- PART E: TEST SSL AUTHENTICATION
+
+-- Step 10: Connect as ssl_user, then run:
+SHOW STATUS LIKE 'Ssl_cipher';
+SHOW STATUS LIKE 'Ssl_version';
+
+-- Step 11: Verify the SSL requirement
+SHOW CREATE USER 'ssl_user'@'localhost';
+SELECT User, Host, ssl_type
+FROM mysql.user
+WHERE User IN ('secure_user', 'ssl_user');
+
+
+--------------------- PostgreSQL (pgAdmin) ---------------------
+
+-- Step 1: Check whether SSL is enabled
+SHOW ssl;
+
+-- Step 2: Check the SSL certificate configuration
+SHOW ssl_cert_file;
+SHOW ssl_key_file;
+
+-- Step 3: Check the PostgreSQL authentication configuration
+SHOW hba_file;
+
+-- Step 4: Check whether your current connection uses SSL
+SELECT
+    ssl,
+    version,
+    cipher
+FROM pg_stat_ssl
+WHERE pid = pg_backend_pid();
+
+-- Step 5: Also check via pgAdmin GUI
+-- Object Explorer -> right-click server -> Properties ->
+-- Connection tab -> SSL mode setting.
+-- Prefer      = use SSL if available
+-- Require     = require an SSL connection
+-- Verify-CA / Verify-Full = require SSL + verify server cert
+
+-- Step 6: Verify the connection again
+SELECT
+    ssl,
+    version,
+    cipher
+FROM pg_stat_ssl
+WHERE pid = pg_backend_pid();
+-- (ssl should now show true)
+
+
+================================================================
+LAB 7 - SETUP & CONFIGURE DATABASE AUDITING AND LOGGING
+(MySQL only in your uploaded sheet - see note at bottom)
+================================================================
+
+-- Step 1: Create database
+CREATE DATABASE audit_lab;
+SHOW DATABASES;
+
+-- Step 2: Select the database
+USE audit_lab;
+
+-- Step 3: Create a table
+CREATE TABLE students (
+    student_id INT PRIMARY KEY,
+    student_name VARCHAR(100),
+    department VARCHAR(50),
+    marks INT
+);
+SHOW TABLES;
+
+-- Step 4: Insert records
+INSERT INTO students VALUES
+(101, 'Rahul', 'CSE', 85),
+(102, 'Anita', 'CSE', 90),
+(103, 'Kiran', 'ECE', 78);
+
+SELECT * FROM students;
+
+-- GENERAL QUERY LOG
+
+-- Step 5: Check general query log status
+SHOW VARIABLES LIKE 'general_log';
+
+-- Step 6: Enable general query log
+SET GLOBAL general_log = 'ON';
+SHOW VARIABLES LIKE 'general_log';
+
+-- Step 7: Find the log file location
+SHOW VARIABLES LIKE 'general_log_file';
+
+-- Step 8: Check the data directory
+SHOW VARIABLES LIKE 'datadir';
+
+-- Step 9-13: Perform operations to generate log entries
+SELECT * FROM students;
+
+INSERT INTO students VALUES
+(104, 'Priya', 'CSE', 88);
+
+UPDATE students
+SET marks = 95
+WHERE student_id = 104;
+
+DELETE FROM students
+WHERE student_id = 103;
+
+CREATE TABLE courses (
+    course_id INT PRIMARY KEY,
+    course_name VARCHAR(100)
+);
+
+-- Step 14: Verify by re-checking table + opening the log file
+SELECT * FROM students;
+-- Open the file from Step 7 and look for:
+-- CREATE DATABASE audit_lab / USE audit_lab / CREATE TABLE students /
+-- INSERT INTO students / SELECT * FROM students / UPDATE students /
+-- DELETE FROM students / CREATE TABLE courses
+
+-- CREATE A TEST USER FOR AUDITING
+
+-- Step 15: Create audit user
+CREATE USER 'labuser'@'localhost'
+IDENTIFIED BY 'LabUser@123';
+
+-- Step 16: Give permissions
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON audit_lab.*
+TO 'labuser'@'localhost';
+
+-- Step 17: Verify permissions
+SHOW GRANTS FOR 'labuser'@'localhost';
+
+-- Step 18: Exit MySQL
+EXIT;
+
+-- Step 19: Login using the new user (from terminal)
+mysql -u labuser -p
+-- password: LabUser@123
+
+-- Step 20: Select database
+USE audit_lab;
+
+-- Step 21: Read data
+SELECT * FROM students;
+
+-- Step 22: Insert data
+INSERT INTO students VALUES
+(105, 'Arun', 'CSE', 82);
+
+-- Step 23: Update data
+UPDATE students
+SET marks = 90
+WHERE student_id = 105;
+
+-- Step 24: Verify the log
+-- Re-open the general query log and look for activity
+-- associated with 'labuser'.
+
+-- ERROR LOG
+
+-- Step 25: Check error log (login as root)
+mysql -u root -p
+SHOW VARIABLES LIKE 'log_error';
+
+-- SLOW QUERY LOG
+
+-- Step 26: Check slow query log
+SHOW VARIABLES LIKE 'slow_query_log';
+
+-- Step 27: Enable slow query log
+SET GLOBAL slow_query_log = 'ON';
+SHOW VARIABLES LIKE 'slow_query_log';
+
+-- Step 28: Check slow query log file
+SHOW VARIABLES LIKE 'slow_query_log_file';
+
+-- Step 29: Check query-time threshold
+SHOW VARIABLES LIKE 'long_query_time';
+-- Temporarily lower it for the lab:
+SET GLOBAL long_query_time = 2;
+SHOW VARIABLES LIKE 'long_query_time';
+
+-- BINARY LOGGING
+
+-- Step 30: Check binary log status
+SHOW VARIABLES LIKE 'log_bin';
+
+-- Step 31: Display binary logs (if enabled)
+SHOW BINARY LOGS;
+
+
+--- PostgreSQL equivalent (NOT in your uploaded Exp 7 file -
+    reconstructed from PostgreSQL logging concepts, verify) ---
+
+-- Check logging collector status
+SHOW logging_collector;
+
+-- Check where logs are written
+SHOW log_directory;
+SHOW log_filename;
+
+-- Check what gets logged (none / ddl / mod / all)
+SHOW log_statement;
+
+-- Check the "slow query" equivalent threshold (ms)
+SHOW log_min_duration_statement;
+
+-- Turn on logging of all statements for this session
+SET log_statement = 'all';
+
+-- Turn on duration logging for queries over 2000 ms
+SET log_min_duration_statement = 2000;
+
+
+================================================================
+END OF CHEAT SHEET
+================================================================
