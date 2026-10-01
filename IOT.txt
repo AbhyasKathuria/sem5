@@ -1,0 +1,343 @@
+================================================================================
+          INTERNET OF THINGS LAB (CSA 3005) - COMPLETE EXAM CODES
+================================================================================
+
+TABLE OF CONTENTS:
+--------------------------------------------------------------------------------
+SET 1:
+  [1] Exp 6  : Interactive Traffic Control System Using Push Button (Arduino)
+  [2] Exp 15 : Blinking LED (Raspberry Pi / Python)
+  [3] Exp 4  : Odd & Even LED Blinking with LED Scrolling (Arduino)
+
+SET 2:
+  [4] Exp 7  : Fading LED Brightness Using Potentiometer (Arduino)
+  [5] Exp 8  : Fading LED Brightness Without Potentiometer (Arduino)
+  [6] Sec 11 : IR Sensor Obstacle Detection with Arduino
+  [7] Exp 3  : Alternating LED Blinking (Arduino)
+================================================================================
+
+
+################################################################################
+# SET 1 - EXPERIMENT 6: INTERACTIVE TRAFFIC CONTROL SYSTEM USING PUSH BUTTON
+################################################################################
+/*
+ * Hardware Connections:
+ *   - Car Red LED    : Digital Pin 12 (via 200 ohm resistor to GND)
+ *   - Car Yellow LED : Digital Pin 11 (via 200 ohm resistor to GND)
+ *   - Car Green LED  : Digital Pin 10 (via 200 ohm resistor to GND)
+ *   - Ped Red LED    : Digital Pin 9  (via 200 ohm resistor to GND)
+ *   - Ped Green LED  : Digital Pin 8  (via 200 ohm resistor to GND)
+ *   - Push Button    : Digital Pin 2  (with pull-down resistor to GND, other side to 5V)
+ */
+
+int carRed = 12;
+int carYellow = 11;
+int carGreen = 10;
+int pedRed = 9;
+int pedGreen = 8;
+int button = 2;
+int crossTime = 5000;
+unsigned long changeTime = 0;
+
+void setup() {
+  pinMode(carRed, OUTPUT);
+  pinMode(carYellow, OUTPUT);
+  pinMode(carGreen, OUTPUT);
+  pinMode(pedRed, OUTPUT);
+  pinMode(pedGreen, OUTPUT);
+  pinMode(button, INPUT);
+
+  // Initial state: cars have green, pedestrians have red
+  digitalWrite(carGreen, HIGH);
+  digitalWrite(pedRed, HIGH);
+}
+
+void loop() {
+  int state = digitalRead(button);
+  // Check if button is pressed and at least 5 seconds have passed since last change
+  if (state == HIGH && (millis() - changeTime) > 5000) {
+    changeLights();
+  }
+}
+
+void changeLights() {
+  // Cars: Green OFF -> Yellow ON
+  digitalWrite(carGreen, LOW);
+  digitalWrite(carYellow, HIGH);
+  delay(2000);
+
+  // Cars: Yellow OFF -> Red ON
+  digitalWrite(carYellow, LOW);
+  digitalWrite(carRed, HIGH);
+  delay(1000);
+
+  // Pedestrians: Red OFF -> Green ON
+  digitalWrite(pedRed, LOW);
+  digitalWrite(pedGreen, HIGH);
+  delay(crossTime);
+
+  // Flashing Pedestrian Green LED warning that time is running out
+  for (int x = 0; x < 10; x++) {
+    digitalWrite(pedGreen, HIGH);
+    delay(250);
+    digitalWrite(pedGreen, LOW);
+    delay(250);
+  }
+
+  // Pedestrians: Red ON
+  digitalWrite(pedRed, HIGH);
+  delay(500);
+
+  // Cars: Yellow ON, Red OFF
+  digitalWrite(carYellow, HIGH);
+  digitalWrite(carRed, LOW);
+  delay(1000);
+
+  // Cars: Green ON, Yellow OFF
+  digitalWrite(carGreen, HIGH);
+  digitalWrite(carYellow, LOW);
+
+  // Record time of light cycle completion
+  changeTime = millis();
+}
+
+
+################################################################################
+# SET 1 - EXPERIMENT 15: RASPBERRY PI BLINKING LED (PYTHON)
+################################################################################
+# Hardware Connections:
+#   - LED Anode (+)  -> 1 kOhm Resistor -> GPIO 18 (Pin 12)
+#   - LED Cathode (-) -> GND (Pin 6)
+#
+# Run command on terminal: python3 blink.py
+
+import RPi.GPIO as GPIO
+import time
+
+# Use Broadcom SOC channel numbers (BCM)
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+
+LED_PIN = 18
+GPIO.setup(LED_PIN, GPIO.OUT)
+
+try:
+    print("LED is blinking... Press Ctrl+C to stop.")
+    while True:
+        GPIO.output(LED_PIN, GPIO.HIGH)  # LED ON
+        print("LED ON")
+        time.sleep(1)
+
+        GPIO.output(LED_PIN, GPIO.LOW)   # LED OFF
+        print("LED OFF")
+        time.sleep(1)
+
+except KeyboardInterrupt:
+    print("\nProgram stopped by user")
+
+finally:
+    GPIO.cleanup()  # Reset GPIO configuration
+
+
+################################################################################
+# SET 1 - EXPERIMENT 4: BLINKING ODD AND EVEN LEDS & SCROLLING LEDS
+################################################################################
+/*
+ * Hardware Connections:
+ *   - 8 LEDs connected to Digital Pins 2, 3, 4, 5, 6, 7, 8, 9
+ *   - Each LED connected through a 1 kOhm resistor to Arduino GND
+ */
+
+int i;
+
+void setup() {
+  for (i = 2; i <= 9; i++) {
+    pinMode(i, OUTPUT);
+  }
+}
+
+void loop() {
+  // 1. Blink Even Pins (2, 4, 6, 8)
+  digitalWrite(2, HIGH);
+  digitalWrite(4, HIGH);
+  digitalWrite(6, HIGH);
+  digitalWrite(8, HIGH);
+  delay(1000);
+
+  digitalWrite(2, LOW);
+  digitalWrite(4, LOW);
+  digitalWrite(6, LOW);
+  digitalWrite(8, LOW);
+
+  // 2. Blink Odd Pins (3, 5, 7, 9)
+  digitalWrite(3, HIGH);
+  digitalWrite(5, HIGH);
+  digitalWrite(7, HIGH);
+  digitalWrite(9, HIGH);
+  delay(1000);
+
+  digitalWrite(3, LOW);
+  digitalWrite(5, LOW);
+  digitalWrite(7, LOW);
+  digitalWrite(9, LOW);
+
+  // 3. LED Scrolling Pattern (from Pin 2 to Pin 9)
+  for (i = 2; i <= 9; i++) {
+    digitalWrite(i, HIGH);
+    delay(200);
+    digitalWrite(i, LOW);
+  }
+}
+
+
+################################################################################
+# SET 2 - EXPERIMENT 7: ADJUSTING LED BRIGHTNESS (FADING) USING POTENTIOMETER
+################################################################################
+/*
+ * Hardware Connections:
+ *   - Potentiometer Pin 1 : 5V
+ *   - Potentiometer Pin 2 (Wiper/Middle) : Analog Pin A0
+ *   - Potentiometer Pin 3 : GND
+ *   - LED Anode (+)       : PWM Digital Pin 9 (via 220/330 ohm resistor)
+ *   - LED Cathode (-)     : GND
+ */
+
+const int analogInput = A0;   // Potentiometer pin
+const int analogOutput = 9;   // PWM LED pin
+
+int sensorValue = 0;          // Value from potentiometer (0 - 1023)
+int outputValue = 0;          // Value to PWM (0 - 255)
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(analogOutput, OUTPUT);
+}
+
+void loop() {
+  // Read analog value from potentiometer
+  sensorValue = analogRead(analogInput);
+
+  // Map 10-bit analog read (0-1023) to 8-bit PWM write (0-255)
+  outputValue = map(sensorValue, 0, 1023, 0, 255);
+
+  // Set the LED brightness
+  analogWrite(analogOutput, outputValue);
+
+  // Print results to Serial Monitor
+  Serial.print("Sensor = ");
+  Serial.print(sensorValue);
+  Serial.print("\t Output = ");
+  Serial.println(outputValue);
+
+  delay(20); // Small stabilization delay
+}
+
+
+################################################################################
+# SET 2 - EXPERIMENT 8: ADJUSTING LED BRIGHTNESS (FADING) WITHOUT POTENTIOMETER
+################################################################################
+/*
+ * Hardware Connections:
+ *   - LED Anode (+)   : PWM Digital Pin 9 (via 220/330 ohm resistor)
+ *   - LED Cathode (-) : GND
+ *
+ * Description: Uses software loop increments to ramp PWM brightness up & down.
+ */
+
+const int ledPin = 9;  // Must be a PWM pin (~3, ~5, ~6, ~9, ~10, ~11 on Uno)
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Fade in: from minimum (0) to maximum (255)
+  for (int fadeValue = 0; fadeValue <= 255; fadeValue += 5) {
+    analogWrite(ledPin, fadeValue);
+    Serial.print("Output = ");
+    Serial.println(fadeValue);
+    delay(30); // Controls fading speed
+  }
+
+  // Fade out: from maximum (255) to minimum (0)
+  for (int fadeValue = 255; fadeValue >= 0; fadeValue -= 5) {
+    analogWrite(ledPin, fadeValue);
+    Serial.print("Output = ");
+    Serial.println(fadeValue);
+    delay(30); // Controls fading speed
+  }
+}
+
+
+################################################################################
+# SET 2 - SECTION 11: IR SENSOR MODULE WITH ARDUINO
+################################################################################
+/*
+ * Hardware Connections:
+ *   - IR Sensor GND -> Arduino GND
+ *   - IR Sensor VCC -> Arduino 5V
+ *   - IR Sensor OUT -> Arduino Digital Pin 8
+ *   - LED Anode (+) -> Digital Pin 12 (via 220/330 ohm resistor)
+ *   - LED Cathode   -> Arduino GND
+ *
+ * Logic: Most IR obstacle modules output active LOW (LOW when obstacle detected).
+ */
+
+const int irSensorPin = 8;
+const int ledPin = 12;
+
+void setup() {
+  pinMode(irSensorPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int sensorStatus = digitalRead(irSensorPin);
+
+  // Check if obstacle is detected (LOW usually indicates detection)
+  if (sensorStatus == LOW) {
+    digitalWrite(ledPin, HIGH); // Turn ON LED
+    Serial.println("Obstacle Detected!");
+  } else {
+    digitalWrite(ledPin, LOW);  // Turn OFF LED
+    Serial.println("Clear - No Obstacle");
+  }
+
+  delay(200);
+}
+
+
+################################################################################
+# SET 2 - EXPERIMENT 3: ALTERNATE LED BLINKING
+################################################################################
+/*
+ * Hardware Connections:
+ *   - LED 1 Anode (+) : Digital Pin 13 (via 1 kOhm resistor to GND)
+ *   - LED 2 Anode (+) : Digital Pin 12 (via 1 kOhm resistor to GND)
+ *   - Cathodes (-)    : Common GND
+ */
+
+int led1 = 13;
+int led2 = 12;
+
+void setup() {
+  pinMode(led1, OUTPUT);
+  pinMode(led2, OUTPUT); // Fixed from original manual (which omitted pin 12 setup)
+  Serial.begin(9600);
+}
+
+void loop() {
+  // State 1: LED1 ON, LED2 OFF
+  digitalWrite(led1, HIGH);
+  digitalWrite(led2, LOW);
+  Serial.println("LED1 is On | LED2 is Off");
+  delay(1000);
+
+  // State 2: LED1 OFF, LED2 ON
+  digitalWrite(led1, LOW);
+  digitalWrite(led2, HIGH);
+  Serial.println("LED1 is Off | LED2 is On");
+  delay(1000);
+}
