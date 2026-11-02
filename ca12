@@ -1,0 +1,681 @@
+Program 1: Basic Neural Network Implementation
+------------------------------------------------
+Implement a simple feedforward neural network using TensorFlow/Keras.
+Dataset: MNIST (handwritten digits, built into Keras).
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+# 1. Load and preprocess the dataset
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+x_train = x_train.astype("float32") / 255.0
+x_test = x_test.astype("float32") / 255.0
+# 2. Build a simple feedforward (fully connected) neural network
+model = models.Sequential([
+ layers.Flatten(input_shape=(28, 28)),
+ layers.Dense(128, activation="relu"),
+ layers.Dense(64, activation="relu"),
+ layers.Dense(10, activation="softmax")
+])
+model.compile(
+ optimizer="adam",
+ loss="sparse_categorical_crossentropy",
+ metrics=["accuracy"]
+)
+model.summary()
+# 3. Train the network
+history = model.fit(
+ x_train, y_train,
+ epochs=5,
+ batch_size=128,
+ validation_split=0.1
+)
+# 4. Evaluate on test data
+test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+print(f"\nTest Accuracy: {test_acc:.4f}")
+print(f"Test Loss: {test_loss:.4f}")
+# 5. Plot training curves
+plt.figure(figsize=(10, 4))
+plt.subplot(1, 2, 1)
+Program 2: Activation Function Comparison
+-------------------------------------------
+Visualize and compare ReLU, Sigmoid, and Tanh activation functions. along with their
+derivatives, to understand their behavior.
+import numpy as np
+import matplotlib.pyplot as plt
+# 1. Define the activation functions
+def relu(x):
+ return np.maximum(0, x)
+def relu_derivative(x):
+ return np.where(x > 0, 1, 0)
+def sigmoid(x):
+ return 1 / (1 + np.exp(-x))
+def sigmoid_derivative(x):
+ s = sigmoid(x)
+ return s * (1 - s)
+def tanh(x):
+ return np.tanh(x)
+def tanh_derivative(x):
+ return 1 - np.tanh(x) ** 2
+# 2. Generate input range
+x = np.linspace(-10, 10, 400)
+# 3. Plot the activation functions
+plt.figure(figsize=(14, 6))
+plt.subplot(2, 3, 1)
+plt.plot(x, relu(x), color="tab:blue")
+plt.title("ReLU"); plt.grid(True)
+plt.subplot(2, 3, 2)
+plt.plot(x, sigmoid(x), color="tab:orange")
+plt.title("Sigmoid"); plt.grid(True)
+plt.subplot(2, 3, 3)
+plt.plot(x, tanh(x), color="tab:green")
+plt.title("Tanh"); plt.grid(True)
+# 4. Plot the derivatives
+plt.subplot(2, 3, 4)
+plt.plot(x, relu_derivative(x), color="tab:blue")
+plt.title("ReLU Derivative"); plt.grid(True)
+plt.subplot(2, 3, 5)
+plt.plot(x, sigmoid_derivative(x), color="tab:orange")
+plt.title("Sigmoid Derivative"); plt.grid(True)
+plt.subplot(2, 3, 6)
+plt.plot(x, tanh_derivative(x), color="tab:green")
+plt.title("Tanh Derivative"); plt.grid(True)
+plt.tight_layout()
+plt.savefig("activation_function_comparison.png")
+plt.show()
+# 5. Discussion (printed summary)
+print("""
+Comparison Summary
+-------------------
+ReLU: Range [0, inf). Fast to compute, avoids vanishing gradients for
+ positive inputs, but can suffer from the 'dying ReLU' problem
+ (gradient is 0 for negative inputs).
+Sigmoid: Range (0, 1). Smooth, but gradients vanish for large |x|, and
+ output is not zero-centered.
+Tanh: Range (-1, 1). Zero-centered (better than sigmoid for hidden
+ layers), but still suffers from vanishing gradients at extremes.
+""")
+Program 3: Training a Multi-Layer Perceptron (MLP)
+------------------------------------------------------
+Train an MLP on the MNIST dataset for handwritten digit classification.
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+import numpy as np
+# 1. Load and preprocess data
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+x_train = x_train.reshape(-1, 784).astype("float32") / 255.0
+x_test = x_test.reshape(-1, 784).astype("float32") / 255.0
+# 2. Build the MLP
+model = models.Sequential([
+ layers.Input(shape=(784,)),
+ layers.Dense(256, activation="relu"),
+ layers.Dropout(0.2),
+ layers.Dense(128, activation="relu"),
+ layers.Dropout(0.2),
+ layers.Dense(10, activation="softmax")
+])
+model.compile(optimizer="adam",
+ loss="sparse_categorical_crossentropy",
+ metrics=["accuracy"])
+model.summary()
+# 3. Train
+history = model.fit(x_train, y_train, epochs=10, batch_size=128,
+ validation_split=0.1)
+# 4. Evaluate
+test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+print(f"\nTest Accuracy: {test_acc:.4f} | Test Loss: {test_loss:.4f}")
+# 5. Confusion-style qualitative check: show a few predictions
+preds = np.argmax(model.predict(x_test[:10]), axis=1)
+fig, axes = plt.subplots(2, 5, figsize=(12, 5))
+for i, ax in enumerate(axes.flat):
+ ax.imshow(x_test[i].reshape(28, 28), cmap="gray")
+ ax.set_title(f"Pred: {preds[i]} | True: {y_test[i]}")
+ ax.axis("off")
+plt.tight_layout()
+plt.savefig("mlp_mnist_predictions.png")
+plt.show()
+Program 4: Loss Function Exploration
+----------------------------------------
+Implement and compare Mean Squared Error (MSE) and Cross-Entropy loss by training
+the same MLP architecture on MNIST with each loss in turn.
+import tensorflow as tf
+from tensorflow.keras import layers, models, utils
+import matplotlib.pyplot as plt
+# 1. Load and preprocess data
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+x_train = x_train.reshape(-1, 784).astype("float32") / 255.0
+x_test = x_test.reshape(-1, 784).astype("float32") / 255.0
+y_train_oh = utils.to_categorical(y_train, 10)
+y_test_oh = utils.to_categorical(y_test, 10)
+def build_model():
+ return models.Sequential([
+ layers.Input(shape=(784,)),
+ layers.Dense(128, activation="relu"),
+ layers.Dense(10, activation="softmax")
+ ])
+# 2. Train with Cross-Entropy loss
+model_ce = build_model()
+model_ce.compile(optimizer="adam", loss="categorical_crossentropy",
+ metrics=["accuracy"])
+hist_ce = model_ce.fit(x_train, y_train_oh, epochs=8, batch_size=128,
+ validation_split=0.1, verbose=0)
+# 3. Train with Mean Squared Error loss
+model_mse = build_model()
+model_mse.compile(optimizer="adam", loss="mean_squared_error",
+ metrics=["accuracy"])
+hist_mse = model_mse.fit(x_train, y_train_oh, epochs=8, batch_size=128,
+ validation_split=0.1, verbose=0)
+# 4. Evaluate both
+ce_loss, ce_acc = model_ce.evaluate(x_test, y_test_oh, verbose=0)
+mse_loss, mse_acc = model_mse.evaluate(x_test, y_test_oh, verbose=0)
+print(f"Cross-Entropy Model -> Test Accuracy: {ce_acc:.4f}, Test Loss: {ce_loss:.4f}")
+print(f"MSE Model -> Test Accuracy: {mse_acc:.4f}, Test Loss: {mse_loss:.4f}")
+# 5. Plot comparison of validation accuracy
+plt.figure(figsize=(8, 5))
+plt.plot(hist_ce.history["val_accuracy"], label="Cross-Entropy")
+plt.plot(hist_mse.history["val_accuracy"], label="MSE")
+plt.title("Validation Accuracy: Cross-Entropy vs MSE")
+plt.xlabel("Epoch"); plt.ylabel("Validation Accuracy"); plt.legend()
+plt.grid(True)
+plt.savefig("loss_function_comparison.png")
+plt.show()
+print("""
+Discussion
+-----------
+Cross-Entropy loss is generally preferred for classification tasks because
+it directly penalizes confident wrong predictions and produces steeper,
+more informative gradients when paired with a softmax output layer.
+MSE, designed for regression, tends to converge more slowly and can give
+weaker gradients for classification, often resulting in lower accuracy for
+the same number of epochs.
+""")
+Program 5: Gradient Descent Optimization
+--------------------------------------------
+Implement and compare SGD, Adam, and RMSprop optimizers on the MNIST dataset
+using an identical MLP architecture, and analyze convergence.
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+# 1. Load and preprocess data
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+x_train = x_train.reshape(-1, 784).astype("float32") / 255.0
+x_test = x_test.reshape(-1, 784).astype("float32") / 255.0
+def build_model():
+ return models.Sequential([
+ layers.Input(shape=(784,)),
+ layers.Dense(128, activation="relu"),
+ layers.Dense(10, activation="softmax")
+ ])
+optimizers = {
+ "SGD": tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9),
+ "Adam": tf.keras.optimizers.Adam(learning_rate=0.001),
+ "RMSprop": tf.keras.optimizers.RMSprop(learning_rate=0.001),
+}
+histories = {}
+# 2. Train the same architecture with each optimizer
+for name, opt in optimizers.items():
+ print(f"\nTraining with optimizer: {name}")
+ model = build_model()
+ model.compile(optimizer=opt,
+ loss="sparse_categorical_crossentropy",
+ metrics=["accuracy"])
+ hist = model.fit(x_train, y_train, epochs=8, batch_size=128,
+ validation_split=0.1, verbose=0)
+ histories[name] = hist
+ test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+ print(f"{name} -> Test Accuracy: {test_acc:.4f}, Test Loss: {test_loss:.4f}")
+# 3. Plot convergence comparison
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+for name, hist in histories.items():
+ plt.plot(hist.history["val_accuracy"], label=name)
+plt.title("Validation Accuracy by Optimizer")
+plt.xlabel("Epoch"); plt.ylabel("Accuracy"); plt.legend(); plt.grid(True)
+plt.subplot(1, 2, 2)
+for name, hist in histories.items():
+ plt.plot(hist.history["val_loss"], label=name)
+plt.title("Validation Loss by Optimizer")
+plt.xlabel("Epoch"); plt.ylabel("Loss"); plt.legend(); plt.grid(True)
+plt.tight_layout()
+plt.savefig("optimizer_comparison.png")
+plt.show()
+print("""
+Discussion
+-----------
+SGD (with momentum) often converges more slowly and can be sensitive to the choice of
+learning rate, but it can generalize well with careful tuning. Adam adjusts the learning rate for
+each parameter based on estimates of first and second moments, resulting in rapid and stable
+convergence right from the start. RMSprop also adapts learning rates per parameter (using a
+moving average of squared gradients) and tends to perform similarly to Adam, especially on
+non-stationary objectives such as recurrent network training.
+""")
+Program 6: Building a CNN from Scratch
+-------------------------------------------
+Implement and train a Convolutional Neural Network for image classification using the
+CIFAR-10 dataset.
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+class_names = ["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship",
+"truck"]
+# 1. Load and preprocess data
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+x_train = x_train.astype("float32") / 255.0
+x_test = x_test.astype("float32") / 255.0
+y_train = y_train.flatten()
+y_test = y_test.flatten()
+# 2. Build the CNN
+model = models.Sequential([
+ layers.Input(shape=(32, 32, 3)),
+ layers.Conv2D(32, (3, 3), activation="relu", padding="same"),
+ layers.BatchNormalization(),
+ layers.Conv2D(32, (3, 3), activation="relu", padding="same"),
+ layers.MaxPooling2D((2, 2)),
+ layers.Dropout(0.25),
+ layers.Conv2D(64, (3, 3), activation="relu", padding="same"),
+ layers.BatchNormalization(),
+ layers.Conv2D(64, (3, 3), activation="relu", padding="same"),
+ layers.MaxPooling2D((2, 2)),
+ layers.Dropout(0.25),
+ layers.Flatten(),
+ layers.Dense(256, activation="relu"),
+ layers.Dropout(0.5),
+ layers.Dense(10, activation="softmax")
+])
+model.compile(optimizer="adam",
+ loss="sparse_categorical_crossentropy",
+ metrics=["accuracy"])
+model.summary()
+# 3. Train
+history = model.fit(x_train, y_train, epochs=15, batch_size=64,
+ validation_split=0.1)
+# 4. Evaluate
+test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+print(f"\nTest Accuracy: {test_acc:.4f} | Test Loss: {test_loss:.4f}")
+# 5. Plot training curves
+plt.figure(figsize=(10, 4))
+plt.subplot(1, 2, 1)
+plt.plot(history.history["accuracy"], label="Train")
+plt.plot(history.history["val_accuracy"], label="Val")
+plt.title("CNN Accuracy"); plt.legend(); plt.grid(True)
+plt.subplot(1, 2, 2)
+plt.plot(history.history["loss"], label="Train")
+plt.plot(history.history["val_loss"], label="Val")
+plt.title("CNN Loss"); plt.legend(); plt.grid(True)
+plt.tight_layout()
+plt.savefig("cnn_cifar10_training_curves.png")
+plt.show()
+Program 7: Transfer Learning with Pre-trained Models
+----------------------------------------------------------
+Fine-tune a pre-trained ResNet50 model for custom image classification using the
+CIFAR-10 dataset (images upsampled to 96x96 for compatibility).
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.applications.resnet50 import preprocess_input
+import matplotlib.pyplot as plt
+IMG_SIZE = 96 # Minimum practical size for ResNet50
+# 1. Load CIFAR-10 and resize
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+y_train, y_test = y_train.flatten(), y_test.flatten()
+# Use a subset for faster fine-tuning
+x_train, y_train = x_train[:10000], y_train[:10000]
+x_test, y_test = x_test[:2000], y_test[:2000]
+def preprocess(images, labels):
+ images = tf.image.resize(images, (IMG_SIZE, IMG_SIZE))
+ images = preprocess_input(images)
+ return images, labels
+train_ds = tf.data.Dataset.from_tensor_slices((x_train, y_train)) \
+ .map(lambda x, y: preprocess(x, y)) \
+ .shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
+test_ds = tf.data.Dataset.from_tensor_slices((x_test, y_test)) \
+ .map(lambda x, y: preprocess(x, y)) \
+ .batch(32).prefetch(tf.data.AUTOTUNE)
+# 2. Load pre-trained ResNet50 without the top classification layer
+base_model = ResNet50(weights="imagenet", include_top=False,
+ input_shape=(IMG_SIZE, IMG_SIZE, 3))
+base_model.trainable = False # freeze base for initial training
+# 3. Add a new classification head
+model = models.Sequential([
+ base_model,
+ layers.GlobalAveragePooling2D(),
+ layers.Dense(128, activation="relu"),
+ layers.Dropout(0.3),
+ layers.Dense(10, activation="softmax")
+])
+model.compile(optimizer=tf.keras.optimizers.Adam(1e-3),
+ loss="sparse_categorical_crossentropy",
+ metrics=["accuracy"])
+model.summary()
+# 4. Train the classification head
+history = model.fit(train_ds, validation_data=test_ds, epochs=5)
+# 5. Fine-tune: unfreeze the top layers of the base model
+base_model.trainable = True
+for layer in base_model.layers[:-20]:
+ layer.trainable = False
+model.compile(optimizer=tf.keras.optimizers.Adam(1e-5),
+ loss="sparse_categorical_crossentropy",
+ metrics=["accuracy"])
+history_fine = model.fit(train_ds, validation_data=test_ds, epochs=5)
+# 6. Evaluate
+test_loss, test_acc = model.evaluate(test_ds, verbose=0)
+print(f"\nFinal Test Accuracy: {test_acc:.4f} | Test Loss: {test_loss:.4f}")
+# 7. Plot accuracy across both phases
+acc = history.history["accuracy"] + history_fine.history["accuracy"]
+val_acc = history.history["val_accuracy"] + history_fine.history["val_accuracy"]
+plt.plot(acc, label="Train Accuracy")
+plt.plot(val_acc, label="Val Accuracy")
+plt.axvline(x=len(history.history["accuracy"]) - 1, color="gray",
+ linestyle="--", label="Fine-tuning starts")
+plt.title("Transfer Learning: Feature Extraction -> Fine-Tuning")
+plt.xlabel("Epoch"); plt.ylabel("Accuracy"); plt.legend(); plt.grid(True)
+plt.savefig("transfer_learning_resnet.png")
+plt.show()
+Program 8: Object Detection using YOLO
+--------------------------------------------
+Use a pre-trained YOLOv5 (via the 'ultralytics' package, which now also ships
+YOLOv8+) model for real-time object detection in images.
+Setup (run once):
+ pip install ultralytics
+Note: This program downloads pre-trained weights and a sample image on first run, so
+it requires internet access (works out-of-the-box on Google Colab).
+from ultralytics import YOLO
+import matplotlib.pyplot as plt
+import cv2
+import urllib.request
+import os
+# 1. Load a pre-trained YOLO model (small/fast variant)
+model = YOLO("yolov8n.pt") # auto-downloads weights on first run
+# 2. Download a sample image if the user hasn't supplied one
+SAMPLE_IMAGE = "sample_street.jpg"
+if not os.path.exists(SAMPLE_IMAGE):
+ sample_url = ("https://ultralytics.com/images/bus.jpg")
+ urllib.request.urlretrieve(sample_url, SAMPLE_IMAGE)
+# 3. Run inference
+results = model(SAMPLE_IMAGE)
+# 4. Draw and display detections
+for result in results:
+ annotated_frame = result.plot() # returns a BGR numpy array
+ annotated_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+ plt.figure(figsize=(10, 8))
+ plt.imshow(annotated_rgb)
+ plt.axis("off")
+ plt.title("YOLOv8 Object Detection")
+ plt.savefig("yolo_detection_output.png", bbox_inches="tight")
+ plt.show()
+ # 5. Print detected classes and confidence scores
+ print("\nDetections:")
+ for box in result.boxes:
+ cls_id = int(box.cls[0])
+ conf = float(box.conf[0])
+ label = model.names[cls_id]
+ print(f" {label}: {conf:.2f} confidence")
+# For real-time webcam/video detection, replace SAMPLE_IMAGE above with:
+# results = model(0) # webcam
+# results = model("video.mp4") # video file
+# and iterate over the results generator frame by frame.
+Program 9: Image Segmentation using U-Net
+-----------------------------------------------
+Implement semantic segmentation using a U-Net architecture.
+Dataset: Oxford-IIIT Pet Dataset (via tensorflow_datasets), which provides pixel-level
+segmentation masks and is commonly used as a stand-in for medical-image-style
+segmentation tasks in coursework.
+Setup (run once):
+ pip install tensorflow-datasets
+import tensorflow as tf
+import tensorflow_datasets as tfds
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+IMG_SIZE = 128
+# 1. Load the dataset
+dataset, info = tfds.load("oxford_iiit_pet:3.*.*", with_info=True)
+def load_image(datapoint):
+ input_image = tf.image.resize(datapoint["image"], (IMG_SIZE, IMG_SIZE))
+ input_mask = tf.image.resize(datapoint["segmentation_mask"],
+ (IMG_SIZE, IMG_SIZE),
+ method="nearest")
+ input_image = tf.cast(input_image, tf.float32) / 255.0
+ input_mask -= 1 # masks are labeled {1,2,3} -> shift to {0,1,2}
+ return input_image, input_mask
+train_ds = dataset["train"].map(load_image).batch(32).prefetch(tf.data.AUTOTUNE)
+test_ds = dataset["test"].map(load_image).batch(32).prefetch(tf.data.AUTOTUNE)
+# 2. Build the U-Net architecture
+def conv_block(x, filters):
+ x = layers.Conv2D(filters, 3, activation="relu", padding="same")(x)
+ x = layers.Conv2D(filters, 3, activation="relu", padding="same")(x)
+ return x
+def build_unet(input_shape=(IMG_SIZE, IMG_SIZE, 3), num_classes=3):
+ inputs = layers.Input(shape=input_shape)
+ # Encoder
+ c1 = conv_block(inputs, 32); p1 = layers.MaxPooling2D()(c1)
+ c2 = conv_block(p1, 64); p2 = layers.MaxPooling2D()(c2)
+ c3 = conv_block(p2, 128); p3 = layers.MaxPooling2D()(c3)
+ # Bottleneck
+ bn = conv_block(p3, 256)
+ # Decoder
+ u3 = layers.Conv2DTranspose(128, 2, strides=2, padding="same")(bn)
+ u3 = layers.concatenate([u3, c3]); c4 = conv_block(u3, 128)
+ u2 = layers.Conv2DTranspose(64, 2, strides=2, padding="same")(c4)
+ u2 = layers.concatenate([u2, c2]); c5 = conv_block(u2, 64)
+ u1 = layers.Conv2DTranspose(32, 2, strides=2, padding="same")(c5)
+ u1 = layers.concatenate([u1, c1]); c6 = conv_block(u1, 32)
+ outputs = layers.Conv2D(num_classes, 1, activation="softmax")(c6)
+ return models.Model(inputs, outputs)
+model = build_unet()
+model.compile(optimizer="adam",
+ loss="sparse_categorical_crossentropy",
+ metrics=["accuracy"])
+model.summary()
+# 3. Train
+history = model.fit(train_ds, validation_data=test_ds, epochs=15)
+# 4. Visualize predictions
+def display_sample(display_list, titles):
+ plt.figure(figsize=(12, 4))
+ for i, img in enumerate(display_list):
+ plt.subplot(1, len(display_list), i + 1)
+ plt.title(titles[i])
+ plt.imshow(tf.keras.utils.array_to_img(img))
+ plt.axis("off")
+ plt.tight_layout()
+for images, masks in test_ds.take(1):
+ pred_masks = model.predict(images)
+ pred_mask = tf.argmax(pred_masks[0], axis=-1)[..., tf.newaxis]
+ display_sample(
+ [images[0], masks[0], pred_mask],
+ ["Input Image", "True Mask", "Predicted Mask"]
+ )
+ plt.savefig("unet_segmentation_output.png")
+ plt.show()
+Program 10: Data Augmentation for CNNs
+--------------------------------------------
+Apply rotation, flipping, and zooming to CIFAR-10 images to improve dataset variability,
+and demonstrate the effect on CNN training.
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+class_names = ["airplane", "automobile", "bird", "cat", "deer",
+ "dog", "frog", "horse", "ship", "truck"]
+# 1. Load data
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+x_train = x_train.astype("float32") / 255.0
+x_test = x_test.astype("float32") / 255.0
+y_train, y_test = y_train.flatten(), y_test.flatten()
+# 2. Define an augmentation pipeline
+data_augmentation = models.Sequential([
+ layers.RandomRotation(0.1),
+ layers.RandomFlip("horizontal"),
+ layers.RandomZoom(0.1),
+ layers.RandomTranslation(0.1, 0.1),
+])
+# 3. Visualize augmentation on a sample image
+sample_image = x_train[0:1]
+plt.figure(figsize=(10, 4))
+for i in range(8):
+ augmented = data_augmentation(sample_image, training=True)
+ plt.subplot(2, 4, i + 1)
+ plt.imshow(augmented[0])
+ plt.axis("off")
+plt.suptitle(f"Augmented versions of a '{class_names[y_train[0]]}' image")
+plt.tight_layout()
+plt.savefig("data_augmentation_samples.png")
+plt.show()
+# 4. Build a CNN that includes the augmentation layer
+def build_model():
+ inputs = layers.Input(shape=(32, 32, 3))
+ x = data_augmentation(inputs)
+ x = layers.Conv2D(32, 3, activation="relu", padding="same")(x)
+ x = layers.MaxPooling2D()(x)
+ x = layers.Conv2D(64, 3, activation="relu", padding="same")(x)
+ x = layers.MaxPooling2D()(x)
+ x = layers.Flatten()(x)
+ x = layers.Dense(128, activation="relu")(x)
+ x = layers.Dropout(0.5)(x)
+ outputs = layers.Dense(10, activation="softmax")(x)
+ return models.Model(inputs, outputs)
+# 5. Train with augmentation and compare against no augmentation
+model_aug = build_model()
+model_aug.compile(optimizer="adam",
+ loss="sparse_categorical_crossentropy",
+ metrics=["accuracy"])
+hist_aug = model_aug.fit(x_train, y_train, epochs=10, batch_size=64,
+ validation_split=0.1, verbose=0)
+model_plain = models.Sequential([
+ layers.Input(shape=(32, 32, 3)),
+ layers.Conv2D(32, 3, activation="relu", padding="same"),
+ layers.MaxPooling2D(),
+ layers.Conv2D(64, 3, activation="relu", padding="same"),
+ layers.MaxPooling2D(),
+ layers.Flatten(),
+ layers.Dense(128, activation="relu"),
+ layers.Dropout(0.5),
+ layers.Dense(10, activation="softmax")
+])
+model_plain.compile(optimizer="adam",
+ loss="sparse_categorical_crossentropy",
+ metrics=["accuracy"])
+hist_plain = model_plain.fit(x_train, y_train, epochs=10, batch_size=64,
+ validation_split=0.1, verbose=0)
+# 6. Compare validation accuracy
+plt.figure(figsize=(8, 5))
+plt.plot(hist_aug.history["val_accuracy"], label="With Augmentation")
+plt.plot(hist_plain.history["val_accuracy"], label="Without Augmentation")
+plt.title("Effect of Data Augmentation on Validation Accuracy")
+plt.xlabel("Epoch"); plt.ylabel("Val Accuracy"); plt.legend(); plt.grid(True)
+plt.savefig("augmentation_effect_comparison.png")
+plt.show()
+Program 11: Implementing a Simple RNN
+--------------------------------------------
+Build a SimpleRNN to predict a synthetic time series (a noisy sine wave), a standard
+stand-in for real-world time series data such as sensor readings or stock prices.
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+# 1. Generate a synthetic time series
+np.random.seed(42)
+t = np.arange(0, 200, 0.1)
+series = np.sin(t) + 0.1 * np.random.randn(len(t))
+# 2. Create supervised sequences (windowing)
+WINDOW = 20
+def create_sequences(data, window):
+ X, y = [], []
+ for i in range(len(data) - window):
+ X.append(data[i:i + window])
+ y.append(data[i + window])
+ return np.array(X), np.array(y)
+X, y = create_sequences(series, WINDOW)
+X = X.reshape(-1, WINDOW, 1)
+split = int(0.8 * len(X))
+X_train, X_test = X[:split], X[split:]
+y_train, y_test = y[:split], y[split:]
+# 3. Build the SimpleRNN model
+model = models.Sequential([
+ layers.Input(shape=(WINDOW, 1)),
+ layers.SimpleRNN(32, activation="tanh", return_sequences=True),
+ layers.SimpleRNN(16, activation="tanh"),
+ layers.Dense(1)
+])
+model.compile(optimizer="adam", loss="mse")
+model.summary()
+# 4. Train
+history = model.fit(X_train, y_train, epochs=30, batch_size=32,
+ validation_split=0.1, verbose=0)
+# 5. Evaluate and predict
+test_loss = model.evaluate(X_test, y_test, verbose=0)
+print(f"\nTest MSE: {test_loss:.4f}")
+predictions = model.predict(X_test)
+# 6. Plot predictions vs actual
+plt.figure(figsize=(12, 5))
+plt.plot(y_test, label="Actual")
+plt.plot(predictions, label="Predicted")
+plt.title("SimpleRNN: Time Series Prediction")
+plt.xlabel("Time Step"); plt.ylabel("Value"); plt.legend(); plt.grid(True)
+plt.savefig("simple_rnn_predictions.png")
+plt.show()
+# 7. Plot training loss
+plt.figure(figsize=(8, 4))
+plt.plot(history.history["loss"], label="Train Loss")
+plt.plot(history.history["val_loss"], label="Val Loss")
+plt.title("SimpleRNN Training Loss")
+plt.legend(); plt.grid(True)
+plt.savefig("simple_rnn_loss.png")
+plt.show()
+Program 12: Sentiment Analysis using LSTM
+------------------------------------------------
+Train an LSTM network to classify IMDB movie reviews as positive or negative. Dataset:
+IMDB reviews (built into Keras).
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+import matplotlib.pyplot as plt
+VOCAB_SIZE = 10000
+MAX_LEN = 200
+# 1. Load and preprocess data
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.imdb.load_data(
+ num_words=VOCAB_SIZE)
+x_train = pad_sequences(x_train, maxlen=MAX_LEN, padding="post", truncating="post")
+x_test = pad_sequences(x_test, maxlen=MAX_LEN, padding="post", truncating="post")
+# 2. Build the LSTM model
+model = models.Sequential([
+ layers.Input(shape=(MAX_LEN,)),
+ layers.Embedding(VOCAB_SIZE, 128),
+ layers.LSTM(64, dropout=0.2, recurrent_dropout=0.2),
+ layers.Dense(32, activation="relu"),
+ layers.Dropout(0.3),
+ layers.Dense(1, activation="sigmoid")
+])
+model.compile(optimizer="adam", loss="binary_crossentropy",
+ metrics=["accuracy"])
+model.summary()
+# 3. Train
+history = model.fit(x_train, y_train, epochs=5, batch_size=128,
+ validation_split=0.2)
+# 4. Evaluate
+test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+print(f"\nTest Accuracy: {test_acc:.4f} | Test Loss: {test_loss:.4f}")
+# 5. Inference example on a few test reviews
+word_index = tf.keras.datasets.imdb.get_word_index()
+reverse_word_index = {v + 3: k for k, v in word_index.items()}
+reverse_word_index[0], reverse_word_index[1], reverse_word_index[2] = (
+ "<pad>", "<start>", "<unk>")
+def decode_review(encoded):
+ return " ".join(reverse_word_index.get(i, "?") for i in encoded if i != 0)
+preds = model.predict(x_test[:3])
+for i in range(3):
+ sentiment = "Positive" if preds[i][0] > 0.5 else "Negative"
+ print(f"\nReview snippet: {decode_review(x_test[i][:40])}...")
+ print(f"Predicted: {sentiment} ({preds[i][0]:.2f}) | Actual: "
+ f"{'Positive' if y_test[i] == 1 else 'Negative'}")
+# 6. Plot training curves
+plt.figure(figsize=(10, 4))
+plt.subplot(1, 2, 1)
+plt.plot(history.history["accuracy"], label="Train")
+plt.plot(history.history["val_accuracy"], label="Val")
+plt.title("LSTM Sentiment Accuracy"); plt.legend(); plt.grid(True)
+plt.subplot(1, 2, 2)
+plt.plot(history.history["loss"], label="Train")
+plt.plot(history.history["val_loss"], label="Val")
+plt.title("LSTM Sentiment Loss"); plt.legend(); plt.grid(True)
+plt.tight_layout()
+plt.savefig("lstm_sentiment_training_curves.png")
+plt.show()
